@@ -136,6 +136,80 @@ function startMeter(){if(meterFrame)return;const tick=()=>{meterFrame=requestAni
 function getSegments(){let seg=[],pos=start;for(const c of validCuts()){let s=clamp(c.s,start,end),e=clamp(c.e,start,end);if(s>pos)seg.push([pos,s]);pos=Math.max(pos,e)}if(pos<end)seg.push([pos,end]);return seg.filter(([s,e])=>e-s>.001)}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function waitSeek(t){return new Promise((resolve,reject)=>{let timer=setTimeout(()=>{v.removeEventListener('seeked',done);resolve()},3000);function done(){clearTimeout(timer);resolve()}v.addEventListener('seeked',done,{once:true});v.currentTime=t})}
+async function repairWebm(blob,durationMs){
+ const buf=new Uint8Array(await blob.arrayBuffer());
+ const readId=p=>{let b0=buf[p];if(!b0)throw Error('bad vint');let len=1,mask=0x80;while(!(b0&mask)){mask>>=1;len++;if(len>8)throw Error('bad vint')}let v=0;for(let i=0;i<len;i++)v=v*256+buf[p+i];return [v,len]};
+ const readSize=p=>{let b0=buf[p];if(!b0)throw Error('bad vint');let len=1,mask=0x80;while(!(b0&mask)){mask>>=1;len++;if(len>8)throw Error('bad vint')}let v=b0&(mask-1),unknown=v===mask-1;for(let i=1;i<len;i++){v=v*256+buf[p+i];unknown=unknown&&buf[p+i]===255}return [unknown?null:v,len]};
+ const uint=(p,n)=>{let v=0;for(let i=0;i<n;i++)v=v*256+buf[p+i];return v};
+ const looksLikeCluster=p=>{if(p<0||p+12>buf.length)return false;if(buf[p]!==0x1f||buf[p+1]!==0x43||buf[p+2]!==0xb6||buf[p+3]!==0x75)return false;const b0=buf[p+4];if(!b0||b0===255)return false;let len=1,mask=0x80;while(!(b0&mask)){mask>>=1;len++;if(len>8)return false}const c=p+4+len;return c+2<=buf.length&&buf[c]===0xe7};
+ let segSizeField=-1,segHdrEnd=-1;
+ {let p=0;while(p<buf.length){const [id,idLen]=readId(p),[sz,szLen]=readSize(p+idLen);if(id===0x18538067){segSizeField=p+idLen;segHdrEnd=p+idLen+szLen;break}if(sz===null)throw Error('unknown top-level size');p+=idLen+szLen+sz}}
+ if(segHdrEnd<0)throw Error('Segment not found');
+ let info=null,tracks=null;const clusters=[];
+ {let q=segHdrEnd;while(q<buf.length){
+  if(looksLikeCluster(q)){const [szv,szLen]=readSize(q+4),dataStart=q+4+szLen;let end;
+   if(szv!==null)end=dataStart+szv;else{end=buf.length;for(let pos=dataStart+1;pos+12<=buf.length;pos++){if(buf[pos]===0x1f&&looksLikeCluster(pos)){end=pos;break}}}
+   clusters.push({start:q,sizeField:q+4,sizeLen:szLen,dataStart,end});q=end;continue}
+  const [cid,cidLen]=readId(q),[csz,cszLen]=readSize(q+cidLen);
+  if(csz===null)throw Error('unknown child size outside cluster');
+  if(cid===0x114d9b74)throw Error('SeekHead not supported');
+  const d=q+cidLen+cszLen,e=d+csz;
+  if(cid===0x1549a966)info={start:q,idLen:cidLen,dataStart:d,dataEnd:e};
+  else if(cid===0x1654ae6b)tracks={dataStart:d,dataEnd:e};
+  q=e}}
+ if(!info)throw Error('Info not found');
+ if(clusters.length&&clusters[0].start<info.dataEnd)throw Error('unexpected layout');
+ let tsScale=1000000,tsEnd=-1,durEl=null;
+ {let r=info.dataStart;while(r<info.dataEnd){const [cid,cidLen]=readId(r),[csz,cszLen]=readSize(r+cidLen);if(csz===null)throw Error('unknown Info child size');const d=r+cidLen+cszLen;if(cid===0x2ad7b1){tsScale=uint(d,csz)||1000000;tsEnd=d+csz}else if(cid===0x4489)durEl={start:r,end:d+csz};r=d+csz}}
+ const insPos=tsEnd>=0?tsEnd:info.dataStart;
+ let trackNo=0,firstTrack=null;
+ if(tracks){let r=tracks.dataStart;while(r<tracks.dataEnd){const [cid,cidLen]=readId(r),[csz,cszLen]=readSize(r+cidLen);if(csz===null)throw Error('unknown Tracks child size');const d=r+cidLen+cszLen,e=d+csz;
+  if(cid===0xae){let s=d,num=null,type=null;while(s<e){const [tid,tidLen]=readId(s),[tsz,tszLen]=readSize(s+tidLen);if(tsz===null)break;const td=s+tidLen+tszLen;if(tid===0xd7)num=uint(td,tsz);else if(tid===0x83)type=uint(td,tsz);s=td+tsz}if(num!==null&&firstTrack===null)firstTrack=num;if(num!==null&&type===1){trackNo=num;break}}
+  r=e}}
+ if(!trackNo)trackNo=firstTrack||1;
+ const clusterTimes=clusters.map(cl=>{let s=cl.dataStart;for(let i=0;i<8&&s<cl.end;i++){const [cid,cidLen]=readId(s),[csz,cszLen]=readSize(s+cidLen);if(csz===null)return 0;const cd=s+cidLen+cszLen;if(cid===0xe7)return uint(cd,csz);s=cd+csz}return 0});
+ let durVal;if(Number.isFinite(durationMs)&&durationMs>0)durVal=durationMs*1e6/tsScale;else if(clusterTimes.length)durVal=clusterTimes[clusterTimes.length-1]+250*1e6/tsScale;else durVal=1000*1e6/tsScale;
+ const durData=new Uint8Array(8);new DataView(durData.buffer).setFloat64(0,durVal,false);
+ const durElNew=Uint8Array.from([0x44,0x89,0x88,...durData]);
+ const infoParts=[];
+ if(!durEl)infoParts.push(buf.subarray(info.dataStart,insPos),durElNew,buf.subarray(insPos,info.dataEnd));
+ else if(durEl.start>=insPos)infoParts.push(buf.subarray(info.dataStart,insPos),durElNew,buf.subarray(insPos,durEl.start),buf.subarray(durEl.end,info.dataEnd));
+ else infoParts.push(buf.subarray(info.dataStart,durEl.start),buf.subarray(durEl.end,insPos),durElNew,buf.subarray(insPos,info.dataEnd));
+ let infoDataLen=0;for(const part of infoParts)infoDataLen+=part.length;
+ const sizeVint=n=>{let len=1;while(n>2**(7*len)-2)len++;const out=new Uint8Array(len);let x=n;for(let i=len-1;i>=0;i--){out[i]=x&255;x=Math.floor(x/256)}out[0]|=0x80>>(len-1);return out};
+ const writeVintWidth=(value,width)=>{const out=new Uint8Array(width);let x=value;for(let i=width-1;i>=0;i--){out[i]=x&255;x=Math.floor(x/256)}out[0]|=0x80>>(width-1);return out};
+ const beBytes=v=>{if(v<=0)return[0];const o=[];while(v){o.unshift(v&255);v=Math.floor(v/256)}return o};
+ const el=(idArr,payloadArr)=>Uint8Array.from([...idArr,...sizeVint(payloadArr.length),...payloadArr]);
+ const infoId=buf.subarray(info.start,info.start+info.idLen),infoSize=sizeVint(infoDataLen);
+ const newInfoElemLen=info.idLen+infoSize.length+infoDataLen;
+ const prefixLen=info.start-segHdrEnd;
+ const firstCluster=clusters.length?clusters[0].start:buf.length;
+ const midLen=firstCluster-info.dataEnd,tailLen=buf.length-firstCluster;
+ let tail=null;
+ if(clusters.length){tail=buf.slice(firstCluster);
+  for(const cl of clusters){const [szv]=readSize(cl.sizeField),need=cl.end-cl.dataStart;
+   if(szv===need)continue;
+   if(szv!==null)throw Error('cannot shrink explicit cluster size');
+   const off=cl.sizeField-firstCluster;
+   if(cl.sizeLen===8&&tail[off]===1){for(let i=0;i<7;i++)tail[off+1+i]=Math.floor(need/256**(6-i))&255}
+   else if(need<=2**(7*cl.sizeLen)-2)tail.set(writeVintWidth(need,cl.sizeLen),off);
+   else throw Error('cannot rewrite cluster size in place')}}
+ let cuesBytes=null;
+ if(clusters.length){const pts=[],tailOffsetInSeg=prefixLen+newInfoElemLen+midLen;
+  for(let i=0;i<clusters.length;i++){const pos=tailOffsetInSeg+(clusters[i].start-firstCluster);const ctp=el([0xb7],[...el([0xf7],beBytes(trackNo)),...el([0xf1],beBytes(pos))]);pts.push(el([0xbb],[...el([0xb3],beBytes(clusterTimes[i])),...ctp]))}
+  cuesBytes=el([0x1c,0x53,0xbb,0x4b],pts.flatMap(x=>Array.from(x)))}
+ const segDataLen=prefixLen+newInfoElemLen+midLen+tailLen+(cuesBytes?cuesBytes.length:0);
+ const head=buf.slice(0,segHdrEnd);
+ {const [oldSz,oldLen]=readSize(segSizeField);
+  if(oldSz===null||oldSz!==segDataLen){
+   if(oldLen===8&&head[segSizeField]===1){for(let i=0;i<7;i++)head[segSizeField+1+i]=Math.floor(segDataLen/256**(6-i))&255}
+   else{const need=sizeVint(segDataLen);if(need.length>oldLen)throw Error('cannot rewrite segment size in place');head.set(writeVintWidth(segDataLen,oldLen),segSizeField)}}}
+ const parts=[head,buf.subarray(segHdrEnd,info.start),infoId,infoSize,...infoParts];
+ if(midLen>0)parts.push(buf.subarray(info.dataEnd,firstCluster));
+ if(tail)parts.push(tail);
+ if(cuesBytes)parts.push(cuesBytes);
+ return new Blob(parts,{type:'video/webm'});
+ }
 $('exportBtn').onclick=async()=>{if(exportBusy||!loaded())return;const segments=getSegments();if(!segments.length){setStatus('Нечего экспортировать: проверьте начало, конец и внутренние вырезы.',true);return}if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){setStatus('Браузер не поддерживает экспорт через MediaRecorder/captureStream. Попробуйте актуальный Chrome или Edge.',true);return}
 exportBusy=true;$('exportBtn').disabled=true;$('progress').style.display='block';$('progressBar').style.width='0%';setStatus('Подготовка экспорта…');
 let canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),stream,recorder,chunks=[],raf=0,ended=false;
@@ -149,10 +223,10 @@ recorder=new MediaRecorder(stream,{mimeType:mime});recorder.ondataavailable=e=>{
 const finished=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Ошибка MediaRecorder'))});
 const speed=Number($('speed').value),fi=Number($('fadeIn').value),fo=Number($('fadeOut').value),total=segments.reduce((a,[s,e])=>a+(e-s)/speed,0);let elapsed=0;
 await waitSeek(segments[0][0]);if(v.readyState<2)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Не удалось получить первый кадр видео.')),5000);v.addEventListener('loadeddata',()=>{clearTimeout(timer);resolve()},{once:true})});
-function draw(){if(ended)return;if(v.readyState>=2)ctx.drawImage(v,sx,sy,sw,sh,0,0,canvas.width,canvas.height);raf=requestAnimationFrame(draw)}draw();recorder.start(250);
+ function draw(){if(ended)return;if(v.readyState>=2)ctx.drawImage(v,sx,sy,sw,sh,0,0,canvas.width,canvas.height);raf=requestAnimationFrame(draw)}draw();const recStart=performance.now();recorder.start(250);
 for(const [ss,ee] of segments){if(ended)break;await waitSeek(ss);v.playbackRate=speed;await v.play();let last=performance.now();while(v.currentTime<ee-.025&&!ended){let now=performance.now(),dt=(now-last)/1000;last=now;let t=v.currentTime-ss,remaining=ee-v.currentTime,vol=1;if(fi>0&&t<fi*speed)vol=Math.min(vol,t/(fi*speed));if(fo>0&&remaining<fo*speed)vol=Math.min(vol,remaining/(fo*speed));if(gain)gain.gain.setTargetAtTime(clamp(vol,0,1),audioCtx.currentTime,.015);elapsed+=dt; $('progressBar').style.width=Math.min(99,elapsed/total*100)+'%';await sleep(20)}v.pause();elapsed+=0.02}
-ended=true;v.pause();if(gain)gain.gain.setTargetAtTime(0,audioCtx.currentTime,.01);await sleep(120);recorder.stop();await finished;cancelAnimationFrame(raf);
-let blob=new Blob(chunks,{type:'video/webm'});if(!blob.size)throw Error('Получился пустой файл. Попробуйте другой браузер.');let ext='webm';if($('format').value==='mp4'){setStatus('Конвертация в MP4 — загружается FFmpeg…');const FFmpeg=window.FFmpegWASM&&window.FFmpegWASM.FFmpeg;if(!FFmpeg)throw Error('Локальная библиотека FFmpeg не найдена (lib/ffmpeg.js).');const ffmpeg=new FFmpeg();ffmpeg.on('progress',({progress})=>{$('progressBar').style.width=Math.min(99,Math.round(progress*100))+'%'});const coreURL=new URL('lib/ffmpeg-core.js',document.baseURI).href;await ffmpeg.load({coreURL,wasmURL:coreURL.replace(/\.js$/,'.wasm')});await ffmpeg.writeFile('input.webm',new Uint8Array(await blob.arrayBuffer()));await ffmpeg.exec(['-i','input.webm','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart','output.mp4']);const data=await ffmpeg.readFile('output.mp4');blob=new Blob([data.buffer],{type:'video/mp4'});await ffmpeg.deleteFile('input.webm');await ffmpeg.deleteFile('output.mp4');await ffmpeg.terminate();ext='mp4'}const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=(($('videoInfo').textContent||'video').replace(/\.[^.]+$/,'')||'video')+'_edited.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$('progressBar').style.width='100%';setStatus(`Готово: ${(blob.size/1024/1024).toFixed(1)} МБ. Файл сохранён.`)
+ended=true;v.pause();if(gain)gain.gain.setTargetAtTime(0,audioCtx.currentTime,.01);await sleep(120);recorder.stop();await finished;const recEnd=performance.now();cancelAnimationFrame(raf);
+let blob=new Blob(chunks,{type:'video/webm'});if(!blob.size)throw Error('Получился пустой файл. Попробуйте другой браузер.');try{blob=await repairWebm(blob,Math.ceil(recEnd-recStart)+40)}catch(err){console.warn('WebM finalize skipped:',err)}let ext='webm';if($('format').value==='mp4'){setStatus('Конвертация в MP4 — загружается FFmpeg…');const FFmpeg=window.FFmpegWASM&&window.FFmpegWASM.FFmpeg;if(!FFmpeg)throw Error('Локальная библиотека FFmpeg не найдена (lib/ffmpeg.js).');const ffmpeg=new FFmpeg();ffmpeg.on('progress',({progress})=>{$('progressBar').style.width=Math.min(99,Math.round(progress*100))+'%'});const coreURL=new URL('lib/ffmpeg-core.js',document.baseURI).href;await ffmpeg.load({coreURL,wasmURL:coreURL.replace(/\.js$/,'.wasm')});await ffmpeg.writeFile('input.webm',new Uint8Array(await blob.arrayBuffer()));await ffmpeg.exec(['-i','input.webm','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart','output.mp4']);const data=await ffmpeg.readFile('output.mp4');blob=new Blob([data.buffer],{type:'video/mp4'});await ffmpeg.deleteFile('input.webm');await ffmpeg.deleteFile('output.mp4');await ffmpeg.terminate();ext='mp4'}const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=(($('videoInfo').textContent||'video').replace(/\.[^.]+$/,'')||'video')+'_edited.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$('progressBar').style.width='100%';setStatus(`Готово: ${(blob.size/1024/1024).toFixed(1)} МБ. Файл сохранён.`)
 }catch(err){console.error(err);setStatus('Не удалось экспортировать: '+(err.message||String(err)),true)}finally{ended=true;cancelAnimationFrame(raf);try{v.pause();v.playbackRate=Number($('speed').value);v.muted=false;if(gain&&audioCtx)gain.gain.setTargetAtTime(1,audioCtx.currentTime,.02);if(stream)stream.getTracks().forEach(t=>t.stop())}catch{}exportBusy=false;$('exportBtn').disabled=false}
 };
 })();
