@@ -4,6 +4,114 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cut — минималистичный видеоредактор</title>
+<meta name="description" content="Бесплатный видеоредактор в браузере: обрезка, вырезание фрагментов, кадрирование, скорость и аудио-фейды. Видео обрабатывается локально и не загружается на сервер.">
+<meta name="theme-color" content="#111214">
+<link rel="canonical" href="https://cut.quantum0.ru/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cut">
+<meta property="og:title" content="Cut — минималистичный видеоредактор">
+<meta property="og:description" content="Бесплатный видеоредактор в браузере: обрезка, кадрирование, скорость, аудио-фейды. Видео обрабатывается локально и не загружается на сервер.">
+<meta property="og:url" content="https://cut.quantum0.ru/">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://cut.quantum0.ru/#organization",
+      "name": "quantum0",
+      "url": "https://cut.quantum0.ru/"
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://cut.quantum0.ru/#webapp",
+      "name": "Cut — минималистичный видеоредактор",
+      "alternateName": "cut",
+      "url": "https://cut.quantum0.ru/",
+      "description": "Бесплатный онлайн-видеоредактор: обрезка, вырезание фрагментов, кадрирование, изменение скорости и аудио-фейды. Работает локально в браузере — видео не загружается на сервер.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Требуется JavaScript. Для экспорта видео — актуальный Chrome или Edge.",
+      "featureList": [
+        "Обрезка начала и конца видео",
+        "Вырезание фрагментов из середины",
+        "Кадрирование с фиксированными пропорциями (1:1, 9:16, 16:9 и другие)",
+        "Изменение скорости от ×0.2 до ×5",
+        "Плавное нарастание и затухание звука",
+        "Экспорт в WebM и MP4",
+        "Локальная обработка: файлы не загружаются на сервер"
+      ],
+      "isAccessibleForFree": true,
+      "inLanguage": "ru",
+      "softwareVersion": "1.0",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "RUB"
+      },
+      "author": { "@id": "https://cut.quantum0.ru/#organization" },
+      "publisher": { "@id": "https://cut.quantum0.ru/#organization" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://cut.quantum0.ru/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Как обрезать видео онлайн бесплатно?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Откройте cut.quantum0.ru, перетащите видеофайл в окно редактора, переместите границы зелёного отрезка на таймлайне и нажмите «Сохранить видео». Регистрация не нужна, сервис полностью бесплатен."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Загружаются ли мои видео на сервер?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Нет. Все файлы обрабатываются локально в вашем браузере: видео не отправляется в интернет и никуда не сохраняется."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Какие форматы видео поддерживаются?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "На вход принимаются MP4, WebM, MOV, M4V и OGV. Результат можно сохранить в WebM или MP4 — конвертация в MP4 выполняется локально через FFmpeg прямо в браузере."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Как вырезать фрагмент из середины видео?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Поставьте курсор превью на начало лишнего фрагмента и нажмите «Поставить начало по текущей позиции», затем переместите курсор на конец фрагмента и нажмите вторую кнопку. Кликните «Вырезать внутри» — красные участки на таймлайне будут удалены при экспорте. Вырезов может быть несколько."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Как изменить пропорции или размер видео?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Включите обрезку в панели «Изображение» и перетащите рамку кадрирования или задайте отступы в пикселях. Доступны фиксированные пропорции: 1:1, 2:3, 3:2, 3:4, 4:3, 9:16 и 16:9."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Какой браузер лучше использовать?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Редактор открывается в любом современном браузере, но для надёжного экспорта через MediaRecorder рекомендуем актуальные Chrome или Edge."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <style>
 :root{color-scheme:dark;--bg:#111214;--panel:#191a1e;--panel2:#202126;--line:#303239;--text:#f1f1f3;--muted:#999ba5;--accent:#c7f36b;--danger:#ff7777}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
@@ -14,7 +122,8 @@ main{max-width:1250px;margin:0 auto;padding:24px;display:grid;grid-template-colu
 .controls{display:flex;align-items:center;gap:10px;margin-top:12px}.time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;white-space:nowrap}.seek{flex:1}.vol{width:90px}.control-label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
 .timeline-wrap{padding:10px 0 0}.ruler{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;padding:0 2px 7px}.timeline{height:68px;background:#111216;border:1px solid var(--line);border-radius:8px;position:relative;overflow:hidden;touch-action:none}.track{position:absolute;inset:0}.segment{position:absolute;top:0;bottom:0;background:#c7f36b24;border-left:2px solid var(--accent);border-right:2px solid var(--accent)}.segment-handle{position:absolute;top:0;bottom:0;width:10px;background:var(--accent);cursor:ew-resize}.segment-body{position:absolute;inset:0 10px;cursor:grab}.segment-body:active{cursor:grabbing}.cut{position:absolute;top:0;bottom:0;background:#09090cbb;border-left:1px solid #ff8585;border-right:1px solid #ff8585}.playhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;z-index:5}.playhead:before{content:"";position:absolute;top:0;left:-4px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #fff}.fade-band{position:absolute;top:0;bottom:0;background:#c7f36b4a;border-bottom:2px solid var(--accent);pointer-events:none}.timeline-note{display:flex;justify-content:space-between;gap:8px;margin-top:8px;color:var(--muted);font-size:11px}.row{display:flex;gap:10px;align-items:center}.row>*{min-width:0}.field{display:flex;flex-direction:column;gap:6px;flex:1}.field label{color:var(--muted);font-size:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.chips{display:flex;gap:7px;flex-wrap:wrap}.chip{font-size:11px;padding:4px 7px;border-radius:5px;background:#282a30;color:#c5c6ce}.list{display:flex;flex-direction:column;gap:7px}.cut-row{display:flex;align-items:center;justify-content:space-between;background:#121317;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}.cut-row button{padding:3px 8px;color:var(--danger)}.hint{color:var(--muted);font-size:11px;line-height:1.5}.right h3{font-size:12px;margin:0 0 12px}.setting{padding:14px 0;border-top:1px solid var(--line)}.setting:first-of-type{border-top:0;padding-top:0}.setting-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.setting-title strong{font-size:12px}.value{font-size:12px;color:var(--accent);font-variant-numeric:tabular-nums}.checkline{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.crop-actions{display:flex;gap:7px;margin-top:10px}.crop-actions button{flex:1;font-size:12px;padding:7px}.export{display:flex;flex-direction:column;gap:10px}.progress{height:5px;background:#303239;border-radius:9px;overflow:hidden;display:none}.progress>div{height:100%;width:0;background:var(--accent);transition:width .2s}.status{font-size:12px;color:var(--muted);min-height:18px}.status.error{color:var(--danger)}.footnote{max-width:1250px;margin:0 auto;padding:0 24px 24px;color:var(--muted);font-size:11px}
 .crop-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}.crop-actions .field{min-width:0}.crop-actions select,.crop-actions button{width:100%;height:calc(1.45em + 16px);min-width:0}.crop-actions button{flex:none}
-@media(max-width:850px){main{grid-template-columns:1fr;padding:14px}.right{display:grid;grid-template-columns:1fr 1fr;align-items:start}.right .export-panel{grid-column:1/-1}header{padding:0 15px}.footnote{padding:0 14px 20px}}@media(max-width:520px){.right{display:flex}.controls{gap:6px}.vol{width:65px}.panel{padding:12px}.stage{min-height:190px}.two{gap:7px}}
+.seo{max-width:1250px;margin:0 auto;padding:0 24px 26px}.seo h2{font-size:16px;margin:0 0 8px;letter-spacing:-.2px}.seo>p{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 14px;max-width:860px}.faq{display:flex;flex-direction:column;gap:7px}.faq details{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 14px;font-size:12px}.faq summary{cursor:pointer;font-weight:600}.faq details p{color:var(--muted);line-height:1.6;margin:8px 0 0}
+@media(max-width:850px){main{grid-template-columns:1fr;padding:14px}.right{display:grid;grid-template-columns:1fr 1fr;align-items:start}.right .export-panel{grid-column:1/-1}header{padding:0 15px}.footnote{padding:0 14px 20px}.seo{padding:0 14px 20px}}@media(max-width:520px){.right{display:flex}.controls{gap:6px}.vol{width:65px}.panel{padding:12px}.stage{min-height:190px}.two{gap:7px}}
 </style>
 </head>
 <body>
@@ -57,6 +166,18 @@ main{max-width:1250px;margin:0 auto;padding:24px;display:grid;grid-template-colu
  </div>
 </aside>
 </main>
+<section class="seo">
+ <h2>Обрезать видео онлайн — бесплатно, без регистрации и загрузки на сервер</h2>
+ <p>Cut — минималистичный видеоредактор, который работает прямо в браузере, без установки программ. Обрезайте начало и конец ролика, вырезайте лишние фрагменты из середины, кадрируйте под нужные пропорции, меняйте скорость и добавляйте плавные аудио-переходы. Видеофайлы обрабатываются локально на вашем компьютере и не отправляются в интернет, а результат сохраняется в WebM или MP4.</p>
+ <div class="faq">
+  <details><summary>Как обрезать видео онлайн бесплатно?</summary><p>Откройте cut.quantum0.ru, перетащите видеофайл в окно редактора, переместите границы зелёного отрезка на таймлайне и нажмите «Сохранить видео». Регистрация не нужна, сервис полностью бесплатен.</p></details>
+  <details><summary>Загружаются ли мои видео на сервер?</summary><p>Нет. Все файлы обрабатываются локально в вашем браузере: видео не отправляется в интернет и никуда не сохраняется.</p></details>
+  <details><summary>Какие форматы видео поддерживаются?</summary><p>На вход принимаются MP4, WebM, MOV, M4V и OGV. Результат можно сохранить в WebM или MP4 — конвертация в MP4 выполняется локально через FFmpeg прямо в браузере.</p></details>
+  <details><summary>Как вырезать фрагмент из середины видео?</summary><p>Поставьте курсор превью на начало лишнего фрагмента и нажмите «Поставить начало по текущей позиции», затем переместите курсор на конец фрагмента и нажмите вторую кнопку. Кликните «Вырезать внутри» — красные участки на таймлайне будут удалены при экспорте. Вырезов может быть несколько.</p></details>
+  <details><summary>Как изменить пропорции или размер видео?</summary><p>Включите обрезку в панели «Изображение» и перетащите рамку кадрирования или задайте отступы в пикселях. Доступны фиксированные пропорции: 1:1, 2:3, 3:2, 3:4, 4:3, 9:16 и 16:9.</p></details>
+  <details><summary>Какой браузер лучше использовать?</summary><p>Редактор открывается в любом современном браузере, но для надёжного экспорта через MediaRecorder рекомендуем актуальные Chrome или Edge.</p></details>
+ </div>
+</section>
 <div class="footnote">Редактор работает локально. Экспорт выполняется в реальном времени через MediaRecorder, поэтому поддержка кодеков зависит от браузера. Для надёжного экспорта используйте актуальный Chrome или Edge. Видеофайл не отправляется на сервер. Конвертация в MP4 — FFmpeg (ffmpeg.wasm) локально, см. THIRD-PARTY-NOTICES.md.</div>
 <script src="lib/ffmpeg.js"></script>
 <script>
