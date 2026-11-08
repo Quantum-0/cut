@@ -341,7 +341,7 @@ async function repairWebm(blob,durationMs){
  let cuesBytes=null;
  if(clusters.length){const pts=[],tailOffsetInSeg=prefixLen+newInfoElemLen+midLen;
   for(let i=0;i<clusters.length;i++){const pos=tailOffsetInSeg+(clusters[i].start-firstCluster);const ctp=el([0xb7],[...el([0xf7],beBytes(trackNo)),...el([0xf1],beBytes(pos))]);pts.push(el([0xbb],[...el([0xb3],beBytes(clusterTimes[i])),...ctp]))}
-  cuesBytes=el([0x1c,0x53,0xbb,0x4b],pts.flatMap(x=>Array.from(x)))}
+  cuesBytes=el([0x1c,0x53,0xbb,0x6b],pts.flatMap(x=>Array.from(x)))}
  const segDataLen=prefixLen+newInfoElemLen+midLen+tailLen+(cuesBytes?cuesBytes.length:0);
  const head=buf.slice(0,segHdrEnd);
  {const [oldSz,oldLen]=readSize(segSizeField);
